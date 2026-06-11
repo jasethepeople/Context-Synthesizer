@@ -3,20 +3,27 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Asynchronous Deep Work Synthesizer (ADWS) API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: ingestion
+    description: Webhook ingestion pipeline
+  - name: session
+    description: Focus block session management
+  - name: delta
+    description: Context delta generation and reverse query
+  - name: graph
+    description: Epistemic event graph queries
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +31,319 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /webhooks/github:
+    post:
+      operationId: ingestGithubEvent
+      tags: [ingestion]
+      summary: Ingest a GitHub webhook event
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GithubWebhookPayload"
+      responses:
+        "202":
+          description: Event accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IngestAck"
+
+  /webhooks/slack:
+    post:
+      operationId: ingestSlackEvent
+      tags: [ingestion]
+      summary: Ingest a Slack webhook event
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SlackWebhookPayload"
+      responses:
+        "202":
+          description: Event accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IngestAck"
+
+  /webhooks/linear:
+    post:
+      operationId: ingestLinearEvent
+      tags: [ingestion]
+      summary: Ingest a Linear webhook event
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LinearWebhookPayload"
+      responses:
+        "202":
+          description: Event accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IngestAck"
+
+  /webhooks/simulate:
+    post:
+      operationId: simulateEvents
+      tags: [ingestion]
+      summary: Simulate a burst of cross-platform events for demo purposes
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SimulateEventsRequest"
+      responses:
+        "202":
+          description: Simulation started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SimulateEventsResponse"
+
+  /ingestion/stats:
+    get:
+      operationId: getIngestionStats
+      tags: [ingestion]
+      summary: Get ingestion pipeline statistics
+      responses:
+        "200":
+          description: Pipeline stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IngestionStats"
+
+  /ingestion/events:
+    get:
+      operationId: listRecentEvents
+      tags: [ingestion]
+      summary: List recent raw events from the pipeline
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: source
+          in: query
+          schema:
+            type: string
+            enum: [github, slack, linear, all]
+            default: all
+      responses:
+        "200":
+          description: Recent events
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RawEventList"
+
+  /session:
+    get:
+      operationId: getCurrentSession
+      tags: [session]
+      summary: Get the current focus session state
+      responses:
+        "200":
+          description: Current session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FocusSession"
+
+  /session/start:
+    post:
+      operationId: startSession
+      tags: [session]
+      summary: Start a deep work focus block
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StartSessionRequest"
+      responses:
+        "201":
+          description: Session started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FocusSession"
+
+  /session/end:
+    post:
+      operationId: endSession
+      tags: [session]
+      summary: End the active focus block and trigger delta generation
+      responses:
+        "200":
+          description: Session ended, delta generated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EndSessionResponse"
+
+  /delta:
+    get:
+      operationId: getContextDelta
+      tags: [delta]
+      summary: Get the current context delta for the active user
+      parameters:
+        - name: compression
+          in: query
+          description: "Compression level 0.0 (executive prose) to 1.0 (dense/hyper-technical)"
+          schema:
+            type: number
+            minimum: 0
+            maximum: 1
+            default: 0.7
+        - name: sessionId
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Context delta
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContextDelta"
+
+  /delta/query:
+    post:
+      operationId: reverseQuery
+      tags: [delta]
+      summary: Run a natural-language reverse query against the offline window
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReverseQueryRequest"
+      responses:
+        "200":
+          description: Query result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReverseQueryResponse"
+
+  /delta/history:
+    get:
+      operationId: getDeltaHistory
+      tags: [delta]
+      summary: Get past context deltas
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        "200":
+          description: Delta history
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeltaHistoryList"
+
+  /graph:
+    get:
+      operationId: getGraphSnapshot
+      tags: [graph]
+      summary: Get the full epistemic event graph snapshot
+      responses:
+        "200":
+          description: Graph snapshot
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GraphSnapshot"
+
+  /graph/stats:
+    get:
+      operationId: getGraphStats
+      tags: [graph]
+      summary: Get graph statistics and drift metrics
+      responses:
+        "200":
+          description: Graph stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GraphStats"
+
+  /graph/nodes:
+    get:
+      operationId: listGraphNodes
+      tags: [graph]
+      summary: List graph nodes with optional type filter
+      parameters:
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [Person, CodeModule, Project, Task, Communication, all]
+            default: all
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+      responses:
+        "200":
+          description: Node list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GraphNodeList"
+
+  /graph/nodes/{id}:
+    get:
+      operationId: getGraphNode
+      tags: [graph]
+      summary: Get a specific graph node with its edges and related events
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Node detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GraphNodeDetail"
+        "404":
+          description: Node not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /graph/reset:
+    post:
+      operationId: resetGraph
+      tags: [graph]
+      summary: Reset the entire graph and event store (dev/demo use only)
+      responses:
+        "200":
+          description: Graph reset
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResetResponse"
+
 components:
   schemas:
     HealthStatus:
@@ -31,6 +351,618 @@ components:
       properties:
         status:
           type: string
-      required:
-        - status
+      required: [status]
 
+    ApiError:
+      type: object
+      properties:
+        error:
+          type: string
+      required: [error]
+
+    GithubWebhookPayload:
+      type: object
+      properties:
+        action:
+          type: string
+        eventType:
+          type: string
+          enum: [push, pull_request, issue, review, commit_comment]
+        repository:
+          type: string
+        actor:
+          type: string
+        title:
+          type: string
+        body:
+          type: string
+        url:
+          type: string
+        ref:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
+      required: [eventType, repository, actor]
+
+    SlackWebhookPayload:
+      type: object
+      properties:
+        eventType:
+          type: string
+          enum: [message, mention, thread_reply, reaction]
+        channel:
+          type: string
+        user:
+          type: string
+        text:
+          type: string
+        threadTs:
+          type: string
+        linkedEntities:
+          type: array
+          items:
+            type: string
+        metadata:
+          type: object
+          additionalProperties: true
+      required: [eventType, channel, user, text]
+
+    LinearWebhookPayload:
+      type: object
+      properties:
+        action:
+          type: string
+          enum: [create, update, remove]
+        type:
+          type: string
+          enum: [Issue, Comment, Project, Cycle]
+        identifier:
+          type: string
+        title:
+          type: string
+        state:
+          type: string
+        assignee:
+          type: string
+        project:
+          type: string
+        body:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
+      required: [action, type, identifier]
+
+    IngestAck:
+      type: object
+      properties:
+        accepted:
+          type: boolean
+        eventId:
+          type: string
+        deduplicated:
+          type: boolean
+        graphNodesCreated:
+          type: integer
+        graphEdgesCreated:
+          type: integer
+      required: [accepted, eventId, deduplicated, graphNodesCreated, graphEdgesCreated]
+
+    SimulateEventsRequest:
+      type: object
+      properties:
+        scenario:
+          type: string
+          enum: [auth_refactor, api_breaking_change, sprint_standup, hotfix_deploy, all]
+          default: all
+        eventCount:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+        spreadMinutes:
+          type: integer
+          minimum: 1
+          maximum: 480
+          default: 60
+      required: [scenario]
+
+    SimulateEventsResponse:
+      type: object
+      properties:
+        eventsQueued:
+          type: integer
+        scenario:
+          type: string
+        estimatedCompletionMs:
+          type: integer
+      required: [eventsQueued, scenario, estimatedCompletionMs]
+
+    IngestionStats:
+      type: object
+      properties:
+        totalEventsIngested:
+          type: integer
+        deduplicatedCount:
+          type: integer
+        entitiesResolved:
+          type: integer
+        eventsPerSource:
+          type: object
+          properties:
+            github:
+              type: integer
+            slack:
+              type: integer
+            linear:
+              type: integer
+          required: [github, slack, linear]
+        processingRatePerMin:
+          type: number
+        pipelineStatus:
+          type: string
+          enum: [idle, processing, backpressure]
+        lastEventAt:
+          type: string
+          nullable: true
+      required: [totalEventsIngested, deduplicatedCount, entitiesResolved, eventsPerSource, processingRatePerMin, pipelineStatus]
+
+    RawEvent:
+      type: object
+      properties:
+        id:
+          type: string
+        source:
+          type: string
+          enum: [github, slack, linear]
+        eventType:
+          type: string
+        actor:
+          type: string
+        summary:
+          type: string
+        linkedNodeIds:
+          type: array
+          items:
+            type: string
+        timestamp:
+          type: string
+        deduplicated:
+          type: boolean
+        deduplicationGroupId:
+          type: string
+          nullable: true
+      required: [id, source, eventType, actor, summary, linkedNodeIds, timestamp, deduplicated]
+
+    RawEventList:
+      type: object
+      properties:
+        events:
+          type: array
+          items:
+            $ref: "#/components/schemas/RawEvent"
+        total:
+          type: integer
+      required: [events, total]
+
+    FocusSession:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        status:
+          type: string
+          enum: [active, idle, ended]
+        startedAt:
+          type: string
+          nullable: true
+        endedAt:
+          type: string
+          nullable: true
+        durationMinutes:
+          type: integer
+          nullable: true
+        graphSnapshotAtStart:
+          type: integer
+          description: "Node count at session start"
+          nullable: true
+        eventsAccumulatedDuring:
+          type: integer
+          nullable: true
+        contextDriftScore:
+          type: number
+          nullable: true
+          description: "0.0 = fully synced, 1.0 = maximum drift"
+        focusLabel:
+          type: string
+          nullable: true
+      required: [id, userId, status]
+
+    StartSessionRequest:
+      type: object
+      properties:
+        userId:
+          type: string
+        focusLabel:
+          type: string
+          description: "What the user is working on (e.g. 'Implementing auth middleware')"
+        activeCodePaths:
+          type: array
+          items:
+            type: string
+          description: "Current files/modules in scope"
+        activeTaskIds:
+          type: array
+          items:
+            type: string
+      required: [userId]
+
+    EndSessionResponse:
+      type: object
+      properties:
+        session:
+          $ref: "#/components/schemas/FocusSession"
+        delta:
+          $ref: "#/components/schemas/ContextDelta"
+      required: [session, delta]
+
+    ContextDelta:
+      type: object
+      properties:
+        id:
+          type: string
+        sessionId:
+          type: string
+          nullable: true
+        generatedAt:
+          type: string
+        compressionLevel:
+          type: number
+        contextDriftScore:
+          type: number
+          description: "Mathematical distance from last known awareness state"
+        windowMinutes:
+          type: integer
+          description: "Time window covered by this delta"
+        tier1:
+          $ref: "#/components/schemas/DeltaTier1"
+        tier2:
+          $ref: "#/components/schemas/DeltaTier2"
+        tier3:
+          $ref: "#/components/schemas/DeltaTier3"
+        totalEventsAnalyzed:
+          type: integer
+        topEntities:
+          type: array
+          items:
+            $ref: "#/components/schemas/EntityMention"
+      required: [id, generatedAt, compressionLevel, contextDriftScore, windowMinutes, tier1, tier2, tier3, totalEventsAnalyzed, topEntities]
+
+    DeltaTier1:
+      type: object
+      description: "Actionable Blockers — changes that directly invalidate current work"
+      properties:
+        label:
+          type: string
+        urgencyScore:
+          type: number
+          description: "0.0–1.0 urgency"
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/DeltaItem"
+        hasBlockers:
+          type: boolean
+      required: [label, urgencyScore, items, hasBlockers]
+
+    DeltaTier2:
+      type: object
+      description: "Alignment Shifts — decisions that alter architecture/APIs/timelines"
+      properties:
+        label:
+          type: string
+        impactScore:
+          type: number
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/DeltaItem"
+      required: [label, impactScore, items]
+
+    DeltaTier3:
+      type: object
+      description: "Passive Landscape — org velocity and team activity map"
+      properties:
+        label:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/DeltaItem"
+        semanticMap:
+          type: array
+          items:
+            $ref: "#/components/schemas/SemanticCluster"
+      required: [label, items, semanticMap]
+
+    DeltaItem:
+      type: object
+      properties:
+        id:
+          type: string
+        content:
+          type: string
+        sourceEventIds:
+          type: array
+          items:
+            type: string
+        affectedNodes:
+          type: array
+          items:
+            type: string
+        sourceUrls:
+          type: array
+          items:
+            type: string
+        severity:
+          type: string
+          enum: [critical, high, medium, low, info]
+        tier:
+          type: integer
+          enum: [1, 2, 3]
+      required: [id, content, sourceEventIds, affectedNodes, sourceUrls, severity, tier]
+
+    SemanticCluster:
+      type: object
+      properties:
+        topic:
+          type: string
+        actors:
+          type: array
+          items:
+            type: string
+        eventCount:
+          type: integer
+        summary:
+          type: string
+      required: [topic, actors, eventCount, summary]
+
+    EntityMention:
+      type: object
+      properties:
+        nodeId:
+          type: string
+        label:
+          type: string
+        type:
+          type: string
+        mentionCount:
+          type: integer
+      required: [nodeId, label, type, mentionCount]
+
+    ReverseQueryRequest:
+      type: object
+      properties:
+        query:
+          type: string
+          description: "Natural-language question against the offline window"
+        windowMinutes:
+          type: integer
+          default: 240
+          description: "How far back to search (minutes)"
+        compressionLevel:
+          type: number
+          minimum: 0
+          maximum: 1
+          default: 0.8
+      required: [query]
+
+    ReverseQueryResponse:
+      type: object
+      properties:
+        query:
+          type: string
+        answer:
+          type: string
+        confidence:
+          type: number
+        relevantEventIds:
+          type: array
+          items:
+            type: string
+        relevantNodeIds:
+          type: array
+          items:
+            type: string
+        semanticSimilarityScores:
+          type: array
+          items:
+            type: object
+            properties:
+              eventId:
+                type: string
+              score:
+                type: number
+            required: [eventId, score]
+        sourceLinks:
+          type: array
+          items:
+            type: string
+        processingMs:
+          type: integer
+      required: [query, answer, confidence, relevantEventIds, relevantNodeIds, semanticSimilarityScores, sourceLinks, processingMs]
+
+    DeltaHistoryList:
+      type: object
+      properties:
+        deltas:
+          type: array
+          items:
+            $ref: "#/components/schemas/ContextDelta"
+        total:
+          type: integer
+      required: [deltas, total]
+
+    GraphNode:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [Person, CodeModule, Project, Task, Communication]
+        label:
+          type: string
+        properties:
+          type: object
+          additionalProperties: true
+        vectorMagnitude:
+          type: number
+          description: "L2 norm of the node's embedding vector"
+        eventCount:
+          type: integer
+        lastUpdated:
+          type: string
+        createdAt:
+          type: string
+      required: [id, type, label, properties, vectorMagnitude, eventCount, lastUpdated, createdAt]
+
+    GraphEdge:
+      type: object
+      properties:
+        id:
+          type: string
+        sourceId:
+          type: string
+        targetId:
+          type: string
+        relationship:
+          type: string
+          enum: [authored, modified, referenced, assigned, blocked_by, depends_on, discussed_in, triggered, resolved]
+        weight:
+          type: number
+          description: "Edge strength 0.0–1.0"
+        eventId:
+          type: string
+        createdAt:
+          type: string
+      required: [id, sourceId, targetId, relationship, weight, createdAt]
+
+    GraphSnapshot:
+      type: object
+      properties:
+        nodes:
+          type: array
+          items:
+            $ref: "#/components/schemas/GraphNode"
+        edges:
+          type: array
+          items:
+            $ref: "#/components/schemas/GraphEdge"
+        stats:
+          $ref: "#/components/schemas/GraphStats"
+        snapshotAt:
+          type: string
+      required: [nodes, edges, stats, snapshotAt]
+
+    GraphStats:
+      type: object
+      properties:
+        totalNodes:
+          type: integer
+        totalEdges:
+          type: integer
+        nodesByType:
+          type: object
+          properties:
+            Person:
+              type: integer
+            CodeModule:
+              type: integer
+            Project:
+              type: integer
+            Task:
+              type: integer
+            Communication:
+              type: integer
+          required: [Person, CodeModule, Project, Task, Communication]
+        avgEdgesPerNode:
+          type: number
+        densityScore:
+          type: number
+          description: "Graph connectivity density 0.0–1.0"
+        contextDriftScore:
+          type: number
+          description: "Current drift from last session baseline"
+        topInfluencers:
+          type: array
+          items:
+            type: object
+            properties:
+              nodeId:
+                type: string
+              label:
+                type: string
+              edgeCount:
+                type: integer
+            required: [nodeId, label, edgeCount]
+        lastMutatedAt:
+          type: string
+          nullable: true
+      required: [totalNodes, totalEdges, nodesByType, avgEdgesPerNode, densityScore, contextDriftScore, topInfluencers]
+
+    GraphNodeList:
+      type: object
+      properties:
+        nodes:
+          type: array
+          items:
+            $ref: "#/components/schemas/GraphNode"
+        total:
+          type: integer
+      required: [nodes, total]
+
+    GraphNodeDetail:
+      type: object
+      properties:
+        node:
+          $ref: "#/components/schemas/GraphNode"
+        inboundEdges:
+          type: array
+          items:
+            $ref: "#/components/schemas/GraphEdge"
+        outboundEdges:
+          type: array
+          items:
+            $ref: "#/components/schemas/GraphEdge"
+        relatedEvents:
+          type: array
+          items:
+            $ref: "#/components/schemas/RawEvent"
+        semanticNeighbors:
+          type: array
+          items:
+            type: object
+            properties:
+              node:
+                $ref: "#/components/schemas/GraphNode"
+              similarityScore:
+                type: number
+            required: [node, similarityScore]
+      required: [node, inboundEdges, outboundEdges, relatedEvents, semanticNeighbors]
+
+    ResetResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        nodesCleared:
+          type: integer
+        edgesCleared:
+          type: integer
+        eventsCleared:
+          type: integer
+      required: [success, nodesCleared, edgesCleared, eventsCleared]
