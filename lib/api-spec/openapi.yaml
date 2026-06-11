@@ -189,7 +189,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/EndSessionResponse"
+                $ref: "#/components/schemas/SessionEndResult"
 
   /delta:
     get:
@@ -227,14 +227,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ReverseQueryRequest"
+              $ref: "#/components/schemas/ReverseQueryInput"
       responses:
         "200":
           description: Query result
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ReverseQueryResponse"
+                $ref: "#/components/schemas/QueryResult"
 
   /delta/history:
     get:
@@ -600,7 +600,7 @@ components:
             type: string
       required: [userId]
 
-    EndSessionResponse:
+    SessionEndResult:
       type: object
       properties:
         session:
@@ -743,7 +743,7 @@ components:
           type: integer
       required: [nodeId, label, type, mentionCount]
 
-    ReverseQueryRequest:
+    ReverseQueryInput:
       type: object
       properties:
         query:
@@ -760,7 +760,7 @@ components:
           default: 0.8
       required: [query]
 
-    ReverseQueryResponse:
+    QueryResult:
       type: object
       properties:
         query:
