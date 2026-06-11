@@ -1,0 +1,14 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "UbdZtSgxI4pKiR4hf4Frs"
+uri = "file://artifacts/adws-video/public/images/circuit-bg.png"
+type = "image"
+title = "dark amber circuit background"
+
+[[generated]]
+id = "XaRd3jdmVqA_A-Pv2XCRf"
+uri = "file://artifacts/adws-video/public/images/graph-bg.png"
+type = "image"
+title = "epistemic graph texture"

@@ -1,0 +1,28 @@
+kind = "video"
+  previewPath = "/adws-video/"
+  title = "ADWS — Animated Explainer"
+  version = "1.0.0"
+  id = "artifacts/adws-video"
+  router = "path"
+
+  [[integratedSkills]]
+  name = "video-js"
+  version = "1.0.0"
+
+  [[services]]
+  name = "web"
+  paths = [ "/adws-video/" ]
+  localPort = 20417
+
+  [services.development]
+  run = "pnpm --filter @workspace/adws-video run dev"
+
+  [services.production]
+  build = [ "pnpm", "--filter", "@workspace/adws-video", "run", "build" ]
+  publicDir = "artifacts/adws-video/dist/public"
+  serve = "static"
+
+  [[services.production.rewrites]]
+  from = "/*"
+  to = "/index.html"
+  
